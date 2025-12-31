@@ -23,7 +23,7 @@ dist/
 
 # Environments
 .env
-.env.*
+
 
 # Logs
 *.log
