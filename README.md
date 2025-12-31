@@ -15,6 +15,9 @@ Quick start:
 4. Frontend: http://localhost:${FRONTEND_PORT:-3000}
 5. n8n: http://localhost:5678
 
+Note- Notes about testing webhooks: n8n exposes active webhook paths under `/webhook/<path>` when executed normally, and under `/webhook-test/<path>` when you run a workflow in **Test** mode. If a webhook call returns 404, confirm the workflow is *active* and use the correct `/webhook` vs `/webhook-test` 
+default /webhook-test/ saved in workflow
+
 Optional: OpenAI
 - To enable OpenAI-powered parsing/decisioning set `OPENAI_API_KEY` in your `.env` and optionally `OPENAI_MODEL` (default: `gpt-3.5-turbo`). The system falls back to a deterministic local parser when no key is set.
 
@@ -66,7 +69,7 @@ n8n workflows:
   managerEmail  = manager@test.com
   opsEmail      = ops@test.com
   ```
-- Notes about testing webhooks: n8n exposes active webhook paths under `/webhook/<path>` when executed normally, and under `/webhook-test/<path>` when you run a workflow in **Test** mode. If a webhook call returns 404, confirm the workflow is *active* and use the correct `/webhook` vs `/webhook-test` URL.
+  
 - The workflow's order-update nodes PUT to `/orders/<id>` and MIS handoff nodes POST to `/mis/orders` (both on `backendApiUrl`).
 - Test the workflow by triggering the webhook path shown in the workflow UI (e.g. `/webhook/ai-estimator`).
 
@@ -89,21 +92,8 @@ backendApiUrl = http://localhost:8000  # or http://host.docker.internal:8000 on 
 misApiUrl     = http://localhost:8000/mis/orders
 ```
 
-2) Fix JSON body bug in **Create CSR Task** node: change
 
-```
-"issues": {{ $json.issues.join(', ') }}
-```
-
-to
-
-```
-"issues": "{{ $json.issues.join(', ') }}"
-```
-
-(Otherwise the JSON body becomes invalid).
-
-**Tip:** Docker Compose default `N8N_WEBHOOK_URL` is set to `http://n8n:5678/webhook/ai-estimator`. If you need to keep an older workflow that uses `ai-print-workflow`, set `N8N_WEBHOOK_URL` in your `.env` to that path or import the workflow and rename its webhook to `ai-estimator`.
+**Tip:** Docker Compose default `N8N_WEBHOOK_URL` is set to `http://n8n:5678/webhook/ai-estimator`. If you need to keep an other workflow , set `N8N_WEBHOOK_URL` in your `.env` to that path or import the workflow and rename its webhook to `ai-estimator`.
 
 Notes:
 - Docker Compose reads `.env` in the project root; edit it before `docker compose up`.
