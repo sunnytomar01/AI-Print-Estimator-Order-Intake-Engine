@@ -1,0 +1,1255 @@
+{
+  "name": "n8n",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-estimator",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "f5a596fc-4f5e-462a-89cf-d9ed80bef7c1",
+      "name": "AI Estimator Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -672,
+        96
+      ],
+      "webhookId": "282fe99d-7ac6-41f8-9d74-fe54cbe9433d"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "misApiUrl",
+              "value": "http://backend:8000/mis/orders",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "backendApiUrl",
+              "value": "http://backend:8000",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "csrEmail",
+              "value": "csr@test.com",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "managerEmail",
+              "value": "manager@test.com",
+              "type": "string"
+            },
+            {
+              "id": "id-5",
+              "name": "opsEmail",
+              "value": "ops@test.com",
+              "type": "string"
+            },
+            {
+              "id": "id-6",
+              "name": "csrWaitHours",
+              "value": 48,
+              "type": "number"
+            },
+            {
+              "id": "id-7",
+              "name": "customerWaitDays",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "id-8",
+              "name": "taskSystemUrl",
+              "value": "<__PLACEHOLDER_VALUE__Airtable/Jira/Postgres task system URL__>",
+              "type": "string"
+            },
+            {
+              "id": "id-9",
+              "name": "slackWebhookUrl",
+              "value": "<__PLACEHOLDER_VALUE__Slack/Teams webhook URL (optional)__>",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "fba34ab6-658c-4dd0-9b7f-6d3124d8fa0c",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -448,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.decision }}",
+                    "rightValue": "=auto_appr",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f486265e-b520-438c-b408-e28526f3408b"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Auto Approved"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.decision }}",
+                    "rightValue": "needs_review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c01b8e5f-9936-4188-92b2-f83a4a1b52b7"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Needs Review"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.decision }}",
+                    "rightValue": "auto_approved",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e61adfe4-b949-4ebf-9f6f-32f299982767"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Rejected"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "744d75f6-31bd-4c5c-bc7e-cf80ca47062a",
+      "name": "Route by Decision",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Workflow Configuration').first().json.misApiUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "=order-{{ $json.body.order_id }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "458c1652-03c5-4746-a6ab-38d04600361c",
+      "name": "Send to MIS/ERP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Workflow Configuration').first().json.backendApiUrl }}/orders/{{ $('AI Estimator Webhook').item.json.body.order_id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"sent_to_mis\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "c74dbd3f-8777-4929-a5c0-54470cb82db4",
+      "name": "Update Order Status - Auto Approved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "sunnytomar0199@gmail.com",
+        "toEmail": "={{ $('Workflow Configuration').item.json.opsEmail }}",
+        "subject": "=[AI-Estimator] Order-{{ $('AI Estimator Webhook').item.json.body.order_id }} Auto Approved",
+        "html": "=<h2>Order Auto-Approved</h2><p><strong>Order ID:</strong> {{ $('AI Estimator Webhook').item.json.body.order_id }}</p><p><strong>Price:</strong> {{ $('AI Estimator Webhook').item.json.body.price }}</p><p><strong>Status:</strong> Sent to MIS/ERP</p><p>This order has been automatically approved and sent to the MIS system.</p>",
+        "options": {}
+      },
+      "id": "0ae8f2cd-9670-4d00-8ff7-4eab7f8d97ea",
+      "name": "Notify CSR - Auto Approved",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        384
+      ],
+      "webhookId": "6a3c159d-65fb-46b1-8c9c-639aa5844037",
+      "credentials": {
+        "smtp": {
+          "id": "sEdbgRMpNX7n2A7d",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Workflow Configuration').first().json.backendApiUrl }}/csr/tasks",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"order_id\": \"{{ $json.body.order_id }}\",\n  \"status\": \"needs_review\",\n  \"issues\": \"{{ $json.body.issues }}\",\n  \"price\": \"{{ $json.body.price }}\",\n  \"created_at\": \"{{ $now.toISO() }}\"\n}\n",
+        "options": {}
+      },
+      "id": "e3ad14b9-7c98-4cd8-8fe6-65edc5d6adbd",
+      "name": "Create CSR Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "sunnytomar0199@gmail.com",
+        "toEmail": "={{ $('Workflow Configuration').first().json.csrEmail }}",
+        "subject": "=[AI-Estimator] Order {{ $('Route by Decision').item.json.body.order_id }} - Needs Review",
+        "html": "=<h2>Order Requires CSR Review</h2><p><strong>Order ID:</strong> {{ $('Route by Decision').item.json.body.order_id }}</p><p><strong>Price:</strong> {{ $('Route by Decision').item.json.body.price }}</p><p><strong>Issues:</strong></p><ul>{{ $('Route by Decision').item.json.body.issues && $('Route by Decision').item.json.body.issues.length ? '<li>' + $('Route by Decision').item.json.body.issues.join('</li><li>') + '</li>' : '<li>None</li>' }}</ul><p><strong>Actions:</strong></p><p><a href=\"http://localhost:5678/webhook-test/csr-approve?order_id={{ $('Route by Decision').item.json.body.order_id }}&action=approve&price={{ $('Route by Decision').item.json.body.price }}&issues={{ encodeURIComponent(( $('Route by Decision').item.json.body.issues || [] ).join(',')) }}\" style=\"background:#28a745;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;\">Approve</a><a href=\"http://localhost:5678/webhook-test/csr-approve?order_id={{ $('Route by Decision').item.json.body.order_id }}&action=reject&price={{ $('Route by Decision').item.json.body.price }}&issues={{ encodeURIComponent(( $('Route by Decision').item.json.body.issues || [] ).join(',')) }}\" style=\"background:#dc3545;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;margin-left:10px;display:inline-block;\">Reject</a></p><p><em>This request will expire in {{ $('Workflow Configuration').first().json.csrWaitHours }} hours.</em></p>",
+        "options": {}
+      },
+      "id": "e4e2d55d-55ad-4209-91e1-823b73035c1e",
+      "name": "Email CSR Team",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        0
+      ],
+      "webhookId": "ee442b90-4f09-413e-98f5-29fc231f7dc3",
+      "credentials": {
+        "smtp": {
+          "id": "sEdbgRMpNX7n2A7d",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "limitWaitTime": true,
+        "resumeAmount": 2,
+        "resumeUnit": "seconds",
+        "options": {}
+      },
+      "id": "82806827-6108-45bc-93d8-e91cab83e272",
+      "name": "Wait for CSR Response",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ],
+      "webhookId": "46f65d76-da96-480c-926a-5d06e797774c"
+    },
+    {
+      "parameters": {
+        "functionCode": "items[0].json = items[0].json || {}; const payload = items[0].json.query && items[0].json.query.payload; if (payload) { try { const decoded = JSON.parse(Buffer.from(payload, 'base64').toString('utf8')); items[0].json = Object.assign({}, items[0].json, decoded); } catch (err) { items[0].json.decode_error = err.message; } } return items;"
+      },
+      "id": "decode_csr_payload",
+      "name": "Decode CSR Payload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Workflow Configuration').first().json.backendApiUrl }}/orders/{{ $json.query.order_id || $json.order_id }}",
+        "options": {}
+      },
+      "id": "fetch_order_details",
+      "name": "Fetch Order Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.query.action }}",
+              "rightValue": "approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "53b583d1-988e-414a-983b-27c7f94ca9a4",
+      "name": "Check CSR Action",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+
+      "id": "bbd2f7f8-63c1-4858-9a02-4001e99d2108",
+      "name": "Update Order Status - CSR Approved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Workflow Configuration').first().json.backendApiUrl }}/orders/{{ $json.order_id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"csr_approved\",\n  \"price\": \"{{ $json.price }}\",\n  \"issues\": \"{{ $json.issues }}\",\n  \"csr_action\": \"{{ $json.action }}\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Workflow Configuration').first().json.backendApiUrl }}/orders/{{ $('AI Estimator Webhook').item.json.body.order_id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"csr_rejected\",\n  \"price\": \"{{ $json.price }}\",\n  \"issues\": \"{{ $json.issues }}\",\n  \"csr_action\": \"{{ $json.action }}\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "4bfa5dd9-daf5-472c-bb35-24870031bf1a",
+      "name": "Update Order Status - CSR Rejected",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        896,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "<__PLACEHOLDER_VALUE__Sender email address__>",
+        "subject": "=[AI-Estimator] Order {{ $node[\"Wait for CSR Response\"].json.query.order_id }} - Rejected by CSR",
+        "html": "=<h2>Order Rejected</h2><p>Dear Customer,</p><p>Your order <strong>{{ $node[\"Wait for CSR Response\"].json.query.order_id }}</strong> has been reviewed and unfortunately cannot be processed at this time.</p><p><strong>Issues identified:</strong></p><ul>{{ $node[\"Wait for CSR Response\"].json.query.issues }}</ul><p>Please contact our customer service team for more information.</p>",
+        "options": {}
+      },
+
+      "id": "04d75bc2-fab0-401a-ab87-bc114430e3f6",
+      "name": "Notify Customer - CSR Rejected",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        192
+      ],
+      "webhookId": "9e4dd02d-8299-4e87-a11c-fc40e8b3a381",
+      "credentials": {
+        "smtp": {
+          "id": "sEdbgRMpNX7n2A7d",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "<__PLACEHOLDER_VALUE__Sender email address__>",
+        "toEmail": "<__PLACEHOLDER_VALUE__Customer email field from order data__>",
+        "subject": "=[AI-Estimator] Order {{ $node[\"Decode CSR Payload\"].json.order_id }} - Approval Required",
+        "html": "=<h2>Your Approval Required</h2><p>Dear Customer,</p><p>Your order <strong>{{ $node[\"Decode CSR Payload\"].json.order_id }}</strong> has been reviewed and requires your approval to proceed.</p><p><strong>Estimated Price:</strong> ${{ $node[\"Decode CSR Payload\"].json.price }}</p><p><strong>Issues:</strong></p><ul>{{ $node[\"Decode CSR Payload\"].json.issues }}</ul><p><strong>Actions:</strong></p><p><a href=\"http://localhost:5678/webhook-test/customer-approval?order_id={{ $node[\"Decode CSR Payload\"].json.order_id }}&action=approve&price={{ $node[\"Decode CSR Payload\"].json.price }}&issues={{ $node[\"Decode CSR Payload\"].json.issues }}\" style=\"background:#28a745;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;\">Approve Order</a> <a href=\"http://localhost:5678/webhook-test/customer-approval?order_id={{ $node[\"Decode CSR Payload\"].json.order_id }}&action=reject&price={{ $node[\"Decode CSR Payload\"].json.price }}&issues={{ $node[\"Decode CSR Payload\"].json.issues }}\" style=\"background:#dc3545;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;margin-left:10px;\">Reject Order</a></p><p>This request will expire in {{ $('Workflow Configuration').first().json.customerWaitDays }} days.</p>",
+        "options": {}
+      },
+      "id": "bcc7bb32-bb43-44b0-9401-f2fe3f793689",
+      "name": "Send Customer Approval Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        0
+      ],
+      "webhookId": "778808c1-eae9-41bb-a8b9-982670d4ea4f",
+      "credentials": {
+        "smtp": {
+          "id": "sEdbgRMpNX7n2A7d",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "limitWaitTime": true,
+        "resumeUnit": "seconds",
+        "options": {}
+      },
+      "id": "5d2002fb-aa58-41c7-86b9-38478ac5d546",
+      "name": "Wait for Customer Response",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        0
+      ],
+      "webhookId": "a06e5008-fcce-4754-bbd4-acb85b218a60"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5dc3b818-01a3-4b58-8d9d-20aa78cae5a7",
+      "name": "Check Customer Action",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Workflow Configuration').first().json.backendApiUrl }}/orders/{{ $json.order_id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"customer_approved\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "a4613b1a-8350-4a21-a032-bd32cfc36baf",
+      "name": "Update Order Status - Customer Approved",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1792,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Workflow Configuration').first().json.backendApiUrl }}/orders/{{ $json.order_id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"customer_rejected\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "32f88ba1-f672-4061-9d73-66de0834d206",
+      "name": "Update Order Status - Customer Rejected",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1792,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "<__PLACEHOLDER_VALUE__Sender email address__>",
+        "toEmail": "={{ $('Workflow Configuration').first().json.csrEmail }}",
+        "subject": "=[AI-Estimator] Order {{ $json.order_id }} - Customer Rejected",
+        "html": "=<h2>Customer Rejected Order</h2><p><strong>Order ID:</strong> {{ $json.order_id }}</p><p>The customer has declined to proceed with this order.</p><p>No further action required.</p>",
+        "options": {}
+      },
+      "id": "214e1f69-590b-4a87-bc74-d93ba3884e41",
+      "name": "Notify CSR - Customer Rejected",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2016,
+        192
+      ],
+      "webhookId": "55a25754-27c7-47d3-b992-44bfddf71402",
+      "credentials": {
+        "smtp": {
+          "id": "sEdbgRMpNX7n2A7d",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "xx",
+        "toEmail": "={{ $json.opsEmail }}",
+        "subject": "=[AI-Estimator] Order{{ $('AI Estimator Webhook').item.json.body.order_id }} - Rejected",
+        "html": "=<h2>Order Rejected</h2><p>Dear Customer,</p><p>Unfortunately, your order <strong>{{ $('AI Estimator Webhook').item.json.body.order_id }}</strong> cannot be processed due to the following issues:</p><ul>{{ $('AI Estimator Webhook').item.json.body.issues }}</ul><p><strong>Recommended fixes:</strong></p><p>Please review the issues above and resubmit your order with the necessary corrections.</p><p>If you have questions, please contact our support team.</p>",
+        "options": {}
+      },
+      "id": "bd601881-3701-48d6-9876-eb6822b6f34e",
+      "name": "Send Rejection Email to Customer",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        192
+      ],
+      "webhookId": "bf3dea4d-80c8-4d85-a969-901ece443981",
+      "credentials": {
+        "smtp": {
+          "id": "sEdbgRMpNX7n2A7d",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Workflow Configuration').first().json.backendApiUrl }}/orders/{{ $('AI Estimator Webhook').item.json.body.order_id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"rejected\",\n  \"Issues\":\"{{ $('Workflow Configuration').item.json.body.issues }}\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "65b7ace0-a8e7-446a-97a8-66b234d1cb8f",
+      "name": "Update Order Status - Rejected",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "path": "csr-approve",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "22b60e9e-e14c-4cf4-a7b6-c1179f64ba66",
+      "name": "CSR Approval Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        192,
+        -208
+      ],
+      "webhookId": "1232cc73-d7c9-4ef5-8e12-fd44bdd9c130"
+    },
+    {
+      "parameters": {
+        "path": "customer-approval",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "5833f567-2b54-4072-8570-8ccb281dc776",
+      "name": "Customer Approval Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1104,
+        -224
+      ],
+      "webhookId": "05ddcdea-75ad-42e4-86ee-c2a13dc2511c"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "30cad0c8-9d32-481c-a06e-38c333376433",
+      "name": "Escalation Timer",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -672,
+        1024
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "<__PLACEHOLDER_VALUE__Sender email address__>",
+        "toEmail": "={{ $('Workflow Configuration').first().json.managerEmail }}",
+        "subject": "[ESCALATION] Unresolved Order Review Required",
+        "html": "<h2>Escalation Alert</h2><p>One or more orders require immediate attention due to timeout or unresolved status.</p><p>Please review the task management system for details.</p><p><strong>Action Required:</strong> Review and resolve pending orders.</p>",
+        "options": {}
+      },
+      "id": "bb450212-7ddf-4ac0-96cf-9b27cf7330d2",
+      "name": "Email Manager - Escalation",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -448,
+        1024
+      ],
+      "webhookId": "e86ae5b1-55aa-41b5-92db-b1dff2ee16b4",
+      "credentials": {
+        "smtp": {
+          "id": "sEdbgRMpNX7n2A7d",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Workflow Configuration').first().json.taskSystemUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"priority\": \"high\",\n  \"title\": \"Escalated Order Review\",\n  \"description\": \"Order timeout - requires immediate manager attention\",\n  \"created_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "88e576c8-81f2-4e28-9d90-fc8f5469c332",
+      "name": "Create High Priority Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -224,
+        1024
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Workflow Configuration').first().json.slackWebhookUrl }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"text\": \"🚨 *Escalation Alert* - Unresolved order review requires immediate attention. Check task system for details.\"\n}",
+        "options": {}
+      },
+      "id": "184ef31a-28bf-43ae-a966-6c6862cf7412",
+      "name": "Slack/Teams Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        1024
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "order_id",
+              "value": "={{ $json.order_id }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "price",
+              "value": "={{ $json.price }}",
+              "type": "number"
+            },
+            {
+              "id": "id-3",
+              "name": "status",
+              "value": "approved",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "ffa03d92-f648-4727-84a4-ff7239db6226",
+      "name": "Map to MIS Schema",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2016,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Workflow Configuration').first().json.misApiUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Idempotency-Key",
+              "value": "=order-{{ $json.order_id }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "a7069b11-9245-4e5c-8488-47d217ac4912",
+      "name": "POST to MIS Endpoint",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "id-1",
+              "leftValue": "={{ $('POST to MIS Endpoint').item.json.statusCode }}",
+              "rightValue": "200",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "id-2",
+              "leftValue": "={{ $('POST to MIS Endpoint').item.json.statusCode }}",
+              "rightValue": "299",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "31521203-0688-42a9-bf37-2deee228efea",
+      "name": "Check MIS Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2464,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $('Workflow Configuration').first().json.backendApiUrl }}/orders/{{ $json.order_id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"completed\",\n  \"updated_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "id": "d36ecb73-884d-4a3a-b9dd-812af3e7cf42",
+      "name": "Update Order Status - Completed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2688,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "<__PLACEHOLDER_VALUE__Sender email address__>",
+        "toEmail": "={{ $('Workflow Configuration').first().json.opsEmail }}",
+        "subject": "=[ALERT] MIS Handoff Failed - Order {{ $json.order_id }}",
+        "html": "=<h2>MIS Integration Failure</h2><p><strong>Order ID:</strong> {{ $json.order_id }}</p><p><strong>Error:</strong> Failed to send order to MIS/ERP system.</p><p><strong>Response:</strong> {{ $json.statusCode }} - {{ $json.body }}</p><p>A retry record has been created. Please investigate and resolve.</p>",
+        "options": {}
+      },
+      "id": "ae4f70bf-5242-41f1-b66a-081eec274b72",
+      "name": "Notify Ops - MIS Failure",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2688,
+        192
+      ],
+      "webhookId": "04c70395-71df-4549-853c-801f0b23ef7d",
+      "credentials": {
+        "smtp": {
+          "id": "sEdbgRMpNX7n2A7d",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Workflow Configuration').first().json.backendApiUrl }}/retry-queue",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"order_id\": \"{{ $json.order_id }}\",\n  \"failed_at\": \"{{ $now.toISO() }}\",\n  \"error\": \"{{ $json.body }}\",\n  \"retry_count\": 0\n}",
+        "options": {}
+      },
+      "id": "120471cf-3598-4493-bd31-969618a5c1a2",
+      "name": "Log Retry Record",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2912,
+        192
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Estimator Webhook": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Route by Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Decision": {
+      "main": [
+        [
+          {
+            "node": "Send to MIS/ERP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create CSR Task",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Rejection Email to Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to MIS/ERP": {
+      "main": [
+        [
+          {
+            "node": "Update Order Status - Auto Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Order Status - Auto Approved": {
+      "main": [
+        [
+          {
+            "node": "Notify CSR - Auto Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create CSR Task": {
+      "main": [
+        [
+          {
+            "node": "Email CSR Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email CSR Team": {
+      "main": [
+        [
+          {
+            "node": "Wait for CSR Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CSR Approval Webhook": {
+      "main": [
+        [
+          {
+            "node": "Wait for CSR Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for CSR Response": {
+      "main": [
+        [
+          {
+            "node": "Decode CSR Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decode CSR Payload": {
+      "main": [
+        [
+          {
+            "node": "Fetch Order Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Order Details": {
+      "main": [
+        [
+          {
+            "node": "Check CSR Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check CSR Action": {
+      "main": [
+        [
+          {
+            "node": "Update Order Status - CSR Approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Order Status - CSR Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Order Status - CSR Approved": {
+      "main": [
+        [
+          {
+            "node": "Send Customer Approval Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Order Status - CSR Rejected": {
+      "main": [
+        [
+          {
+            "node": "Notify Customer - CSR Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Customer Approval Email": {
+      "main": [
+        [
+          {
+            "node": "Wait for Customer Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Approval Webhook": {
+      "main": [
+        [
+          {
+            "node": "Wait for Customer Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Customer Response": {
+      "main": [
+        [
+          {
+            "node": "Check Customer Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Customer Action": {
+      "main": [
+        [
+          {
+            "node": "Update Order Status - Customer Approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Order Status - Customer Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Order Status - Customer Approved": {
+      "main": [
+        [
+          {
+            "node": "Map to MIS Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Order Status - Customer Rejected": {
+      "main": [
+        [
+          {
+            "node": "Notify CSR - Customer Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Rejection Email to Customer": {
+      "main": [
+        [
+          {
+            "node": "Update Order Status - Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalation Timer": {
+      "main": [
+        [
+          {
+            "node": "Email Manager - Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Manager - Escalation": {
+      "main": [
+        [
+          {
+            "node": "Create High Priority Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create High Priority Task": {
+      "main": [
+        [
+          {
+            "node": "Slack/Teams Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map to MIS Schema": {
+      "main": [
+        [
+          {
+            "node": "POST to MIS Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST to MIS Endpoint": {
+      "main": [
+        [
+          {
+            "node": "Check MIS Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check MIS Response": {
+      "main": [
+        [
+          {
+            "node": "Update Order Status - Completed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Ops - MIS Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Ops - MIS Failure": {
+      "main": [
+        [
+          {
+            "node": "Log Retry Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "f2f25a00-695c-4965-b5ad-529218112710",
+  "meta": {
+    "instanceId": "4d0f90e4e3cf5ec34de5816b082ed82e3a5d393afcbec68c4a2f670a2ed35d46"
+  },
+  "id": "eQgI2VzhcqJXIjAO",
+  "tags": []
+}

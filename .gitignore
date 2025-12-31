@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+dist/
+
+# Environments
+.env
+.env.*
+
+# Logs
+*.log
+
+# Test & Coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Docker
+docker-compose.override.yml
+
+# Misc
+*.sqlite3
